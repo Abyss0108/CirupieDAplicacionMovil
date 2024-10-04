@@ -37,7 +37,7 @@ hotfix/: Ramas dedicadas a la corrección urgente de errores críticos en produc
 ### Estrategia Seleccionada: Canary Deployment
 El despliegue de nuevas versiones se realiza de forma gradual para reducir el impacto de errores en producción. Se monitoriza el rendimiento y se implementan cambios de manera controlada.
 
-### 4.2 Entornos de Despliegue:
+###Entornos de Despliegue:
 - Desarrollo: Nuevas funcionalidades se desarrollan en ramas feature/.
 - Staging: Validación e integración de las funcionalidades en develop.
 - Producción: Contiene el código estable proveniente de main.
