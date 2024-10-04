@@ -1,4 +1,4 @@
-# ## #### ##### ###### ### Proyecto de Gestión de Citas - Aplicación Móvil
+# Proyecto de Gestión de Citas - Aplicación Móvil
 
 ##  Descripción del Proyecto
 Este proyecto consiste en una aplicación móvil desarrollada con React Native para la gestión de citas en una clínica. Los clientes podrán registrarse y agendar sus citas, con la opción de realizar un pago anticipado del 50%. El personal administrativo tendrá acceso para gestionar y revisar las agendas.
