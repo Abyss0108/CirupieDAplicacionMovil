@@ -4,7 +4,7 @@ import { Agenda, AgendaSchedule } from "react-native-calendars";
 import { AgendaEntry } from "react-native-calendars";
 
 import moment from "moment";
-import "moment/locale/es"; // Establece el idioma de Moment.js si es necesario
+import "moment-timezone"; 
 
 interface Cita {
   IdCita: number;
@@ -47,24 +47,32 @@ export default function Admin() {
       const response = await fetch("https://rest-api2-three.vercel.app/api/citas");
       const data: Cita[] = await response.json();
       
-      const citasFormateadas = data.reduce<AgendaSchedule>((acc, cita) => {
+      // Ordenar citas por HorarioInicio
+      const citasOrdenadas = data.sort((a, b) => moment(a.HorarioInicio).diff(moment(b.HorarioInicio)));
+      
+      const citasFormateadas = citasOrdenadas.reduce<AgendaSchedule>((acc, cita) => {
         const date = moment(cita.HorarioInicio).format("YYYY-MM-DD");
         if (!acc[date]) acc[date] = [];
+        const start = moment.tz(cita.HorarioInicio, "America/Argentina/Buenos_Aires").add(6, 'hours');
+        const end = moment.tz(cita.HoraFin, "America/Argentina/Buenos_Aires").add(6, 'hours'); 
         acc[date].push({
           id: cita.IdCita,
           name: `${cita.Nombre} ${cita.ApellidoP}`,
-          start: moment(cita.HorarioInicio).toDate(),
-          end: moment(cita.HoraFin).toDate(),
+          start: start.toDate(),
+          end: end.toDate(),
           description: cita.Descripcion,
           estado: cita.Estado,
         } as CustomAgendaEntry);
+        
         return acc;
       }, {});
+      
       setCitas(citasFormateadas);
     } catch (error) {
       console.error("Error al obtener citas:", error);
     }
   };
+  
 
   const handleSelectEvent = (event: Evento) => {
     setSelectedEvent(event);
@@ -82,21 +90,18 @@ export default function Admin() {
           return (
             <View style={styles.item}>
               <Text onPress={() => handleSelectEvent(cita)}>
-                {cita.name}: {moment(cita.start).format("HH:mm")} - {moment(cita.end).format("HH:mm")}
+                {cita.name}: {moment(cita.start).format("MM-DD HH:mm")} - {moment(cita.end).format("HH:mm")}
               </Text>
             </View>
           );
         }}
-        renderEmptyDate={() => (
-          <View style={styles.emptyDate}>
-            <Text>No hay citas</Text>
-          </View>
-        )}
+       
         theme={{
           agendaDayTextColor: "black",
           agendaDayNumColor: "black",
           agendaTodayColor: "red",
           agendaKnobColor: "blue",
+          backgroundColor: "#f0f0f0", 
         }}
       />
       <Modal
@@ -144,18 +149,21 @@ const styles = StyleSheet.create({
     padding: 10,
     borderBottomWidth: 1,
     borderBottomColor: "#ddd",
+    marginVertical: 1, 
+    borderRadius: 5, 
   },
   emptyDate: {
-    padding: 10,
-    backgroundColor: "#f0f0f0",
+    padding: 50, 
+    backgroundColor: "#e0e0e0", 
     borderBottomWidth: 1,
     borderBottomColor: "#ddd",
-  },
+    borderRadius: 5, 
+  },  
   modalView: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.5)", // Fondo oscuro para el overlay
+    backgroundColor: "rgba(0, 0, 0, 0.5)", 
     padding: 20,
   },
   modalContent: {

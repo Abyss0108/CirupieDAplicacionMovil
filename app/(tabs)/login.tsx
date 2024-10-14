@@ -78,7 +78,7 @@ export default function TabTwoScreen() {
   return (
     <View style={styles.container}>
       <Image
-        source={require('@/assets/images/CirupieD.png')}
+        source={require('@/assets/images/splash.png')}
         style={styles.logo}
       />
       <Text style={styles.title}>Iniciar Sesión</Text>
