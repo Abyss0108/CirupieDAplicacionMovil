@@ -34,6 +34,15 @@ export default function TabLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="calendar"
+        options={{
+          title: 'Admin',
+          tabBarIcon: ({ color, focused }) => (
+            <TabBarIcon name={focused ? 'code-slash' : 'calendar'} color={color} />
+          ),
+        }}
+      />
     </Tabs>
     </AuthProvider>
     
