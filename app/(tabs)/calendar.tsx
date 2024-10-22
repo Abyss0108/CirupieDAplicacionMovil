@@ -33,7 +33,7 @@ interface Evento {
   estado: boolean;
 }
 
-export default function Admin() {
+export default function CalendarScreen() {
   const [citas, setCitas] = useState<AgendaSchedule>({});
   const [selectedEvent, setSelectedEvent] = useState<Evento | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
