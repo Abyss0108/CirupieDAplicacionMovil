@@ -1,4 +1,4 @@
-name: PWA CI/CD Workflow - Main
+name: Movil CI/CD Workflow - Main
 
 on:
   push:
@@ -48,33 +48,44 @@ jobs:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         run: snyk test --all-projects
 
-  deploy:
-    needs: integration-tests
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+deploy:
+  needs: integration-tests
+  runs-on: ubuntu-latest
+  steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
 
-      - name: Install Node.js
-        uses: actions/setup-node@v2
-        with:
-          node-version: '20'
+    - name: Install Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: '20'
 
-      - name: Install dependencies
-        run: npm install
+    - name: Install dependencies
+      run: npm install
 
-      - name: Install Vercel CLI
-        run: npm install -g vercel
+    - name: Install Expo CLI
+      run: npm install -g expo-cli
 
-      - name: Build project 
-        run: CI=false npm run build  
+    - name: Log in to Expo
+      run: expo login -u ${{ secrets.EXPO_USERNAME }} -p ${{ secrets.EXPO_PASSWORD }}
 
-      - name: Deploy to Vercel
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-        run: vercel --prod --token $VERCEL_TOKEN --yes
+    - name: Publish Expo App
+      run: expo publish
+
+    # Si quieres generar un build para Android o iOS con Expo EAS:
+    - name: Install Expo EAS CLI
+      run: npm install -g eas-cli
+
+    - name: EAS Build (Android)
+      run: eas build --platform android --non-interactive
+      env:
+        EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+    
+    - name: EAS Build (iOS)
+      run: eas build --platform ios --non-interactive
+      env:
+        EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
 
   notify-email:
     needs: [lint, integration-tests, deploy]  
