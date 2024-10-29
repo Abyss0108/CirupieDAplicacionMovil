@@ -1,38 +1,77 @@
-// src/context/AuthContext.tsx
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { View, Text } from 'react-native';
 import * as SecureStore from "expo-secure-store";
 
 interface AuthContextType {
   isAuthenticated: boolean;
-  user: any; // O define una interfaz más específica para el usuario
-  login: (user: any) => void; // Cambiado para recibir información del usuario
-  logout: () => void;
+  user: any; 
+  login: (userData: any) => void; 
+  logout: () => void; 
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+// Valores predeterminados del contexto
+const AuthContextDefaultValues: AuthContextType = {
+  isAuthenticated: false,
+  user: null,
+  login: () => {},
+  logout: () => {},
+};
+
+export const AuthContext = createContext<AuthContextType>(AuthContextDefaultValues);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState<any>(null); // Almacena la información del usuario
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true); // Estado para indicar que se están cargando los datos
 
+  // Verificar si hay un token almacenado al iniciar la app
   useEffect(() => {
-    const checkAuth = async () => {
-      const token = await SecureStore.getItemAsync("userToken");
-      setIsAuthenticated(!!token);
+    const loadUserFromToken = async () => {
+      try {
+        const token = await SecureStore.getItemAsync("userToken");
+        if (token) {
+          // Aquí podrías hacer una solicitud a la API para obtener los datos del usuario con el token
+          // Simularemos cargando los datos de `SecureStore` directamente:
+          const userData = {
+            IdUser: 6,
+            Nombre: "Victor",
+            Correo: "20210704@uthh.edu.mx",
+            Telefono: "7891198958",
+            ImagenUrl: "https://res.cloudinary.com/dleyjie7k/image/upload/v1730190293/fxn2amdmsm2lc2hqjwmw.jpg",
+            Token: JSON.parse(token),
+          };
+          setUser(userData);
+          setIsAuthenticated(true);
+        }
+      } catch (error) {
+        console.error("Error al cargar el token del usuario:", error);
+      } finally {
+        setLoading(false); // Termina el estado de carga
+      }
     };
-    checkAuth();
+
+    loadUserFromToken();
   }, []);
 
   const login = (userData: any) => {
     setIsAuthenticated(true);
-    setUser(userData); // Almacena la información del usuario
-    SecureStore.setItemAsync("userToken", "dummy-auth-token"); // Guarda el token si es necesario
+    setUser({
+      IdUser: userData.IdUser,
+      Nombre: userData.Nombre,
+      Correo: userData.Correo,
+      Telefono: userData.Telefono,
+      ImagenUrl: userData.ImagenUrl,
+    });
+
+    if (userData.Token) {
+      SecureStore.setItemAsync("userToken", JSON.stringify(userData.Token)); // Guardar el token
+    }
   };
 
   const logout = () => {
     SecureStore.deleteItemAsync("userToken");
     setIsAuthenticated(false);
-    setUser(null); // Limpia la información del usuario al cerrar sesión
+    setUser(null);
   };
 
   return (
@@ -40,12 +79,4 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       {children}
     </AuthContext.Provider>
   );
-};
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth debe ser usado dentro de un AuthProvider');
-  }
-  return context;
 };
