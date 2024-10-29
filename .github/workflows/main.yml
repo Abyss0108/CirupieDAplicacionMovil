@@ -174,4 +174,8 @@ notify-email:
                 <a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" class="button">Ver resultados del pipeline</a>
               </div>
               <div class="footer">
-                <p>Este es un mensaje automatizado de tu bot de CI/CD. No es necesario responder.<
+                  <p>Este es un mensaje automatizado de tu bot de CI/CD. No es necesario responder.</p>
+              </div>
+            </div>
+          </body>
+          </html>  
