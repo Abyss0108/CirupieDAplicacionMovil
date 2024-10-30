@@ -67,7 +67,8 @@ jobs:
 
       # Autenticación en Expo y EAS usando el token
       - name: Log in to Expo with EAS Token
-        run: eas login --token ${{ secrets.EXPO_TOKEN }}
+        run: echo "${{ secrets.EXPO_TOKEN }}" | eas login --stdin
+
 
       # Configurar EAS Update (se asegura de que el proyecto esté configurado correctamente)
       - name: Configure EAS Update
