@@ -48,42 +48,51 @@ jobs:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         run: snyk test --all-projects --severity-threshold=high --fail-on=all
 
-  deploy:
-    needs: integration-tests
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+deploy:
+  needs: integration-tests
+  runs-on: ubuntu-latest
+  steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
 
-      - name: Install Node.js
-        uses: actions/setup-node@v2
-        with:
-          node-version: '20'
+    - name: Install Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: '16'  # Usa Node.js 16 para evitar incompatibilidades
 
-      - name: Install dependencies
-        run: npm install
+    - name: Install dependencies
+      run: npm install
 
-      - name: Install Expo CLI
-        run: npm install -g expo-cli
+    - name: Install Expo EAS CLI
+      run: npm install -g eas-cli
 
-      - name: Log in to Expo
-        run: expo login -u ${{ secrets.EXPO_USERNAME }} -p ${{ secrets.EXPO_PASSWORD }}
+    # Autenticación en Expo y EAS usando el token
+    - name: Log in to Expo with EAS Token
+      run: eas login --token ${{ secrets.EXPO_TOKEN }}
 
-      - name: Publish Expo App
-        run: expo publish
+    # Configurar EAS Update (se asegura de que el proyecto esté configurado correctamente)
+    - name: Configure EAS Update
+      run: eas update:configure
+      env:
+        EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
-      - name: Install Expo EAS CLI
-        run: npm install -g eas-cli
+    # Publicar actualización de EAS (esto reemplaza `expo publish`)
+    - name: Publish EAS Update
+      run: eas update --non-interactive
+      env:
+        EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
-      - name: EAS Build (Android)
-        run: eas build --platform android --non-interactive
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+    # Compilar la aplicación Android
+    - name: EAS Build (Android)
+      run: eas build --platform android --non-interactive
+      env:
+        EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
-      - name: EAS Build (iOS)
-        run: eas build --platform ios --non-interactive
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+    # Compilar la aplicación iOS
+    - name: EAS Build (iOS)
+      run: eas build --platform ios --non-interactive
+      env:
+        EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
   notify-email:
     needs: [lint, integration-tests, deploy]

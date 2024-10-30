@@ -1,3 +1,4 @@
+/* eslint-env jest */
 jest.mock('react-native/Libraries/Animated/NativeAnimatedHelper');
 
 // Mock de expo-secure-store para evitar errores de importación
