@@ -62,30 +62,29 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      # Configurar EAS Update (se asegura de que el proyecto esté configurado correctamente)
+      - name: Configure EAS Update
+        run: eas update:configure
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}  # Expo token desde variables de entorno
 
-    # Configurar EAS Update (se asegura de que el proyecto esté configurado correctamente)
-    - name: Configure EAS Update
-      run: eas update:configure
-      env:
-        EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}  # Expo token desde variables de entorno
+      # Publicar actualización de EAS (esto reemplaza `expo publish`)
+      - name: Publish EAS Update
+        run: eas update --non-interactive
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}  # Expo token desde variables de entorno
 
-    # Publicar actualización de EAS (esto reemplaza `expo publish`)
-    - name: Publish EAS Update
-      run: eas update --non-interactive
-      env:
-        EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}  # Expo token desde variables de entorno
+      # Compilar la aplicación Android
+      - name: EAS Build (Android)
+        run: eas build --platform android --non-interactive
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}  # Expo token desde variables de entorno
 
-    # Compilar la aplicación Android
-    - name: EAS Build (Android)
-      run: eas build --platform android --non-interactive
-      env:
-        EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}  # Expo token desde variables de entorno
-
-    # Compilar la aplicación iOS
-    - name: EAS Build (iOS)
-      run: eas build --platform ios --non-interactive
-      env:
-        EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}  # Expo token desde variables de entorno
+      # Compilar la aplicación iOS
+      - name: EAS Build (iOS)
+        run: eas build --platform ios --non-interactive
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}  # Expo token desde variables de entorno
 
   notify-email:
     needs: [lint, integration-tests, deploy]
