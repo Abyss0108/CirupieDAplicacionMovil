@@ -29,7 +29,7 @@ global.fetch = jest.fn(() =>
     })
   )
 );
-
+   
 describe('LoginScreen', () => {
   it('Login', async () => {
     try {
