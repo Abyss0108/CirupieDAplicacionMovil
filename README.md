@@ -126,6 +126,9 @@ El proyecto utiliza GitHub Actions para automatizar las pruebas y el despliegue 
 	cd CirupieDAplicacionMovil
 ####  Instalar Dependencias
 	npm install
-### Ejecutar el Proyecto
-	npm run start
-
+### Instala Expo CLI
+	npm install -g expo-cli
+ ### Inicia el servidor de desarrollo de Expo
+	npx expo start
+ ### Inicia el proyecto
+ Al ejecutar el comando anterior, se te proporcionará un código QR para escanearlo en Expo Go en tu dispositivo movil o igual obtendrás una URL que te permitirá ejecutar la aplicación en tu navegador.
