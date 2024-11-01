@@ -82,6 +82,7 @@ jobs:
           subject: CI/CD Pipeline Notification - ${{ github.ref_name }}
           from: CI/CD Bot <ci-bot@example.com>
           to: ${{ secrets.EMAIL_TO }}
+          secure: false
           html_body: |
             <html lang="es">
             <head>
