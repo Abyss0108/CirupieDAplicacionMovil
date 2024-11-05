@@ -58,7 +58,7 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v2
         with:
-          node-version: '16'  # Usa Node.js 16 para evitar incompatibilidades
+          node-version: '20'  
 
       - name: Install dependencies
         run: npm install
