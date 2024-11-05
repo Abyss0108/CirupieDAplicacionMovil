@@ -15,7 +15,7 @@ global.fetch = jest.fn(() =>
   Promise.resolve(
     new Response(JSON.stringify({
       IdUser: 6,
-      Nombre: 'Victor',
+      Nombre: 'Victoria',
       Correo: '20210704@uthh.edu.mx',
       Pass: 'hashedpassword',
       Token: '406264',
