@@ -63,7 +63,7 @@ jobs:
         run: npm instal
 
   notify-email:
-    needs: [lint, integration-tests, deploy]
+    needs: [lint, integration-tests, deploy]  
     runs-on: ubuntu-latest
     steps:
       - name: Prepare SHA and Run ID
@@ -82,7 +82,6 @@ jobs:
           subject: CI/CD Pipeline Notification - ${{ github.ref_name }}
           from: CI/CD Bot <ci-bot@example.com>
           to: ${{ secrets.EMAIL_TO }}
-          secure: false
           html_body: |
             <html lang="es">
             <head>
@@ -154,7 +153,7 @@ jobs:
                   <a href="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" class="button">Ver resultados del pipeline</a>
                 </div>
                 <div class="footer">
-                    <p>Este es un mensaje automatizado de tu bot de CI/CD. No es necesario responder.</p>
+                  <p>Este es un mensaje automatizado de tu bot de CI/CD. No es necesario responder.</p>
                 </div>
               </div>
             </body>
