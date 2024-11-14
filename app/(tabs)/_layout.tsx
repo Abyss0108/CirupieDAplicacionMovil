@@ -44,6 +44,15 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
+          name="pagos"
+          options={{
+            title: 'Pagos',
+            tabBarIcon: ({ color, focused }) => (
+              <TabBarIcon name={focused ? 'create' : 'create-outline'} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
           name="perfil"
           options={{
             title: 'Perfil',

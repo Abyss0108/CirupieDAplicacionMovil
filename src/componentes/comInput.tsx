@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React from 'react';
+import { View, Text, TextInput, StyleSheet } from 'react-native';
 
 interface InputProps {
   estado: {
@@ -14,7 +15,7 @@ interface InputProps {
   placeholder: string;
   name: string;
   leyendaError: string;
-  expresionRegular?: RegExp; // Hacer que sea opcional
+  expresionRegular?: RegExp;
 }
 
 const ComponenteInput: React.FC<InputProps> = ({
@@ -23,50 +24,57 @@ const ComponenteInput: React.FC<InputProps> = ({
   tipo,
   label,
   placeholder,
-  name,
   leyendaError,
   expresionRegular,
 }) => {
-  const [val, cambiarValor] = useState<string>("d-none");
-
-  const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    cambiarEstado({ ...estado, campo: e.target.value });
-  };
-
-  const validacion = () => {
+  const validacion = (texto: string) => {
     if (expresionRegular) {
-      if (expresionRegular.test(estado.campo)) {
-        cambiarEstado({ ...estado, valido: "true" });
-        cambiarValor("d-none");
+      if (expresionRegular.test(texto)) {
+        cambiarEstado({ campo: texto, valido: "true" });
       } else {
-        cambiarEstado({ ...estado, valido: "false" });
-        cambiarValor("d-block");
+        cambiarEstado({ campo: texto, valido: "false" });
       }
+    } else {
+      cambiarEstado({ campo: texto, valido: null });
     }
   };
 
   return (
-    <div className="mb-3">
-      <label htmlFor={name} className="form-label">
-        <strong>{label}</strong>
-      </label>
-      <input
-        type={tipo}
-        className="form-control"
-        id={name}
+    <View style={styles.container}>
+      <Text style={styles.label}>{label}</Text>
+      <TextInput
+        style={[styles.input, estado.valido === "false" && styles.errorInput]}
         placeholder={placeholder}
         value={estado.campo}
-        onChange={onChange}
-        onKeyUp={validacion}
-        onBlur={validacion}
-        onKeyPress={validacion}
-        required
+        onChangeText={(text) => validacion(text)}
+        keyboardType={tipo === "tel" ? "phone-pad" : "default"}
       />
-      <div className={val}>
-        <div className="text-danger">{leyendaError}</div>
-      </div>
-    </div>
+      {estado.valido === "false" && <Text style={styles.errorText}>{leyendaError}</Text>}
+    </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    marginBottom: 16,
+  },
+  label: {
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    padding: 8,
+    borderRadius: 4,
+  },
+  errorInput: {
+    borderColor: 'red',
+  },
+  errorText: {
+    color: 'red',
+    marginTop: 4,
+  },
+});
 
 export default ComponenteInput;
