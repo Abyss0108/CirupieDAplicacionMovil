@@ -53,12 +53,22 @@ export default function TabLayout() {
             ),
           }}
         />
+
          <Tabs.Screen
           name="pacientes"
           options={{
             title: 'Pacientes',
             tabBarIcon: ({ color, focused }) => (
               <TabBarIcon name={focused ? 'bandage' : 'bandage-outline'} color={color} />
+            ),
+          }}
+        />
+         <Tabs.Screen
+          name="feedback"
+          options={{
+            title: 'FeedBack',
+            tabBarIcon: ({ color, focused }) => (
+              <TabBarIcon name={focused ? 'analytics' : 'analytics-outline'} color={color} />
             ),
           }}
         />
