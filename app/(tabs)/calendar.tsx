@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, Button, Modal, StyleSheet, TouchableOpacity, FlatList, Alert } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { View, Text, Alert, TouchableOpacity, FlatList, Modal, StyleSheet, RefreshControl } from 'react-native';
 import { Calendar } from 'react-native-calendars';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import moment from 'moment';
 import 'moment/locale/es';
 
@@ -20,13 +19,13 @@ export default function Citas() {
   const [citasFiltradas, setCitasFiltradas] = useState<Cita[]>([]);
   const [selectedCita, setSelectedCita] = useState<Cita | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [refreshing, setRefreshing] = useState(false); // Estado para control de refresco
 
   useEffect(() => {
     obtenerCitas();
   }, []);
 
   useEffect(() => {
-    // Filtrar citas para la fecha seleccionada
     const citasEnFecha = citas.filter(
       cita => moment(cita.HorarioInicio).format("YYYY-MM-DD") === selectedDate
     );
@@ -42,6 +41,12 @@ export default function Citas() {
       Alert.alert("Error", "No se pudieron cargar las citas");
     }
   };
+
+  // Función para manejar el refresco
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    obtenerCitas().finally(() => setRefreshing(false)); // Finaliza el refresco cuando termina obtenerCitas
+  }, []);
 
   const handleDateSelection = (day: { dateString: string }) => {
     setSelectedDate(day.dateString);
@@ -79,6 +84,9 @@ export default function Citas() {
           data={citasFiltradas}
           keyExtractor={item => item.IdCita.toString()}
           renderItem={renderCita}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
         />
       ) : (
         <Text style={styles.noCitasText}>No hay citas para esta fecha.</Text>
@@ -100,7 +108,9 @@ export default function Citas() {
                 <Text style={styles.modalText}>Descripción: {selectedCita.Descripcion}</Text>
               </View>
             )}
-            <Button title="Cerrar" onPress={() => setModalVisible(false)} color="#2196F3" />
+            <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeButton}>
+              <Text style={styles.closeButtonText}>Cerrar</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -164,5 +174,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginVertical: 5,
     color: "#333",
+  },
+  closeButton: {
+    marginTop: 10,
+    backgroundColor: "#2196F3",
+    paddingVertical: 10,
+    borderRadius: 5,
+  },
+  closeButtonText: {
+    color: "white",
+    textAlign: "center",
+    fontSize: 16,
   },
 });

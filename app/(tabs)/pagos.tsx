@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
 
 type Pago = {
   pacienteId: string;
@@ -12,21 +12,27 @@ type Pago = {
 export default function HistorialPagos() {
   const [historial, setHistorial] = useState<Pago[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    const obtenerHistorial = async () => {
-      try {
-        const response = await fetch('https://rest-api2-three.vercel.app/api/historial-pagos');
-        const data = await response.json();
-        setHistorial(data);
-      } catch (error) {
-        console.error("Error al obtener el historial de pagos:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     obtenerHistorial();
+  }, []);
+
+  const obtenerHistorial = async () => {
+    try {
+      const response = await fetch('https://rest-api2-three.vercel.app/api/historial-pagos');
+      const data = await response.json();
+      setHistorial(data);
+    } catch (error) {
+      console.error("Error al obtener el historial de pagos:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    obtenerHistorial().finally(() => setRefreshing(false));
   }, []);
 
   const renderPago = ({ item }: { item: Pago }) => (
@@ -50,6 +56,9 @@ export default function HistorialPagos() {
           data={historial}
           keyExtractor={(item) => item.paymentId}
           renderItem={renderPago}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
           ListHeaderComponent={
             <View style={styles.header}>
               <Text style={styles.headerCell}>Paciente ID</Text>
@@ -65,13 +74,13 @@ export default function HistorialPagos() {
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        justifyContent: 'flex-start',
-        padding: 16,
-        paddingTop: 50,
-        backgroundColor: 'white',
-      },
+  container: {
+    flex: 1,
+    justifyContent: 'flex-start',
+    padding: 16,
+    paddingTop: 50,
+    backgroundColor: 'white',
+  },
   title: {
     fontSize: 24,
     fontWeight: 'bold',

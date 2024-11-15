@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from "react";
-import { View, Alert, StyleSheet, Modal } from "react-native";
+import React, { useState, useEffect, useCallback } from "react";
+import { View, Alert, StyleSheet, Modal, FlatList, TouchableOpacity, RefreshControl } from "react-native";
 import { TextInput, Button, Text } from "react-native-paper";
-import { FlatList, TouchableOpacity } from "react-native";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 
 type Paciente = {
@@ -27,6 +26,7 @@ export default function Paciente() {
   const [modalVisible, setModalVisible] = useState(false);
   const [addModalVisible, setAddModalVisible] = useState(false);
   const [selectedPaciente, setSelectedPaciente] = useState<Paciente | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     obtenerPacientes();
@@ -52,12 +52,18 @@ export default function Paciente() {
     }
   };
 
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    obtenerPacientes().finally(() => setRefreshing(false));
+  }, []);
+
   const handleSubmit = async () => {
     if (!nombre || !apellidoP || !telefono || !correo) {
       Alert.alert("Error", "Por favor completa todos los campos obligatorios.");
       return;
     }
 
+    // Validación de los campos
     if (!/^[a-zA-ZÀ-ÿ\s]{1,40}$/.test(nombre) || !/^[a-zA-ZÀ-ÿ\s]{1,40}$/.test(apellidoP)) {
       Alert.alert("Error", "El nombre y el apellido paterno solo pueden contener letras.");
       return;
@@ -161,6 +167,9 @@ export default function Paciente() {
         renderItem={renderPaciente}
         keyExtractor={(item) => item.IdPaciente}
         contentContainerStyle={styles.list}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       />
 
       {/* Modal de agregar paciente */}
@@ -205,65 +214,65 @@ export default function Paciente() {
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        justifyContent: 'flex-start',
-        padding: 16,
-        paddingTop: 50,
-        backgroundColor: 'white',
-      },
-      title: {
-        fontSize: 24,
-        fontWeight: "bold",
-        textAlign: "center",
-        marginBottom: 16,
-      },
-      searchInput: {
-        marginBottom: 16,
-      },
-      addButton: {
-        marginBottom: 16,
-      },
-      list: {
-        paddingBottom: 100,
-      },
-      card: {
-        backgroundColor: "#f9f9f9",
-        padding: 16,
-        borderRadius: 8,
-        marginBottom: 8,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-        elevation: 2,
-      },
-      cardTitle: {
-        fontSize: 18,
-        fontWeight: "bold",
-      },
-      modalContainer: {
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-        backgroundColor: "rgba(0, 0, 0, 0.5)",
-      },
-      modalContent: {
-        backgroundColor: "#fff",
-        padding: 20,
-        borderRadius: 8,
-        width: "80%",
-      },
-      modalTitle: {
-        fontSize: 20,
-        fontWeight: "bold",
-        marginBottom: 16,
-        textAlign: "center",
-      },
-      input: {
-        marginBottom: 12,
-      },
-      modalButton: {
-        marginTop: 8,
-      },
-    });
+  container: {
+    flex: 1,
+    justifyContent: 'flex-start',
+    padding: 16,
+    paddingTop: 50,
+    backgroundColor: 'white',
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: 16,
+  },
+  searchInput: {
+    marginBottom: 16,
+  },
+  addButton: {
+    marginBottom: 16,
+  },
+  list: {
+    paddingBottom: 100,
+  },
+  card: {
+    backgroundColor: "#f9f9f9",
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+  },
+  modalContent: {
+    backgroundColor: "#fff",
+    padding: 20,
+    borderRadius: 8,
+    width: "80%",
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 16,
+    textAlign: "center",
+  },
+  input: {
+    marginBottom: 12,
+  },
+  modalButton: {
+    marginTop: 8,
+  },
+});
