@@ -68,6 +68,13 @@ export default function LoginScreen() {
       <Button mode="contained" onPress={handleLogin} style={styles.loginButton}>
         Iniciar Sesión
       </Button>
+      <Button
+        mode="text"
+        onPress={() => router.push('/citas-disponibles')}
+        style={styles.loginButton}
+      >
+        Ver Citas Disponibles
+      </Button>
     </View>
   );
 }

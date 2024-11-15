@@ -16,6 +16,7 @@
       "supportsTablet": true
     },
     "android": {
+      "newArchEnabled": true,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/splash.png",
         "backgroundColor": "#ffffff"
@@ -34,6 +35,7 @@
       "typedRoutes": true
     },
     "extra": {
+      "stripePublishableKey": "pk_live_51QK3p3KiNmXtnueI3z94e8nX8S4ttxOP0sfHk02U1CLbrlTP0qijyQOvHWFBF9LMCzGj3qQPm8jKwiHMNpsG8VgJ00uIf2Umb7",
       "eas": {
         "projectId": "21ba5e1f-84a3-4af0-a0b1-1aa8aa32d59d"
       }
