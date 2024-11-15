@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from "react";
-import { View, Text, Modal, Button, StyleSheet } from "react-native";
-import { Agenda, AgendaSchedule } from "react-native-calendars";
-import { AgendaEntry } from "react-native-calendars";
-
-import moment from "moment";
-import "moment-timezone"; 
+import React, { useEffect, useState } from 'react';
+import { View, Text, Button, Modal, StyleSheet, TouchableOpacity, FlatList, Alert } from 'react-native';
+import { Calendar } from 'react-native-calendars';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import moment from 'moment';
+import 'moment/locale/es';
 
 interface Cita {
   IdCita: number;
@@ -13,119 +12,95 @@ interface Cita {
   HorarioInicio: string;
   HoraFin: string;
   Descripcion: string;
-  Estado: boolean;
-}
-interface CustomAgendaEntry extends AgendaEntry {
-  id: number;
-  name: string;
-  start: Date;
-  end: Date;
-  description: string;
-  estado: boolean;
 }
 
-interface Evento {
-  id: number;
-  name: string;
-  start: Date;
-  end: Date;
-  description: string;
-  estado: boolean;
-}
-
-export default function CalendarScreen() {
-  const [citas, setCitas] = useState<AgendaSchedule>({});
-  const [selectedEvent, setSelectedEvent] = useState<Evento | null>(null);
+export default function Citas() {
+  const [citas, setCitas] = useState<Cita[]>([]);
+  const [selectedDate, setSelectedDate] = useState<string>(moment().format("YYYY-MM-DD"));
+  const [citasFiltradas, setCitasFiltradas] = useState<Cita[]>([]);
+  const [selectedCita, setSelectedCita] = useState<Cita | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
 
   useEffect(() => {
     obtenerCitas();
   }, []);
 
+  useEffect(() => {
+    // Filtrar citas para la fecha seleccionada
+    const citasEnFecha = citas.filter(
+      cita => moment(cita.HorarioInicio).format("YYYY-MM-DD") === selectedDate
+    );
+    setCitasFiltradas(citasEnFecha);
+  }, [selectedDate, citas]);
+
   const obtenerCitas = async () => {
     try {
       const response = await fetch("https://rest-api2-three.vercel.app/api/citas");
-      const data: Cita[] = await response.json();
-      
-      // Ordenar citas por HorarioInicio
-      const citasOrdenadas = data.sort((a, b) => moment(a.HorarioInicio).diff(moment(b.HorarioInicio)));
-      
-      const citasFormateadas = citasOrdenadas.reduce<AgendaSchedule>((acc, cita) => {
-        const date = moment(cita.HorarioInicio).format("YYYY-MM-DD");
-        if (!acc[date]) acc[date] = [];
-        const start = moment.tz(cita.HorarioInicio, "America/Argentina/Buenos_Aires").add(6, 'hours');
-        const end = moment.tz(cita.HoraFin, "America/Argentina/Buenos_Aires").add(6, 'hours'); 
-        acc[date].push({
-          id: cita.IdCita,
-          name: `${cita.Nombre} ${cita.ApellidoP}`,
-          start: start.toDate(),
-          end: end.toDate(),
-          description: cita.Descripcion,
-          estado: cita.Estado,
-        } as CustomAgendaEntry);
-        
-        return acc;
-      }, {});
-      
-      setCitas(citasFormateadas);
+      const data = await response.json();
+      setCitas(data);
     } catch (error) {
-      console.error("Error al obtener citas:", error);
+      Alert.alert("Error", "No se pudieron cargar las citas");
     }
   };
-  
 
-  const handleSelectEvent = (event: Evento) => {
-    setSelectedEvent(event);
+  const handleDateSelection = (day: { dateString: string }) => {
+    setSelectedDate(day.dateString);
+  };
+
+  const handleSelectEvent = (cita: Cita) => {
+    setSelectedCita(cita);
     setModalVisible(true);
   };
 
+  const renderCita = ({ item }: { item: Cita }) => (
+    <TouchableOpacity style={styles.item} onPress={() => handleSelectEvent(item)}>
+      <Text style={styles.itemText}>{item.Nombre} {item.ApellidoP}</Text>
+      <Text>{moment(item.HorarioInicio).format("HH:mm")} - {moment(item.HoraFin).format("HH:mm")}</Text>
+    </TouchableOpacity>
+  );
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Mi Calendario</Text>
-      <Agenda
-        items={citas}
-        selected={moment().format("YYYY-MM-DD")}
-        renderItem={(item: any) => {
-          const cita = item as Evento;
-          return (
-            <View style={styles.item}>
-              <Text onPress={() => handleSelectEvent(cita)}>
-                {cita.name}: {moment(cita.start).format("MM-DD HH:mm")} - {moment(cita.end).format("HH:mm")}
-              </Text>
-            </View>
-          );
-        }}
-       
-        theme={{
-          agendaDayTextColor: "black",
-          agendaDayNumColor: "black",
-          agendaTodayColor: "red",
-          agendaKnobColor: "blue",
-          backgroundColor: "#f0f0f0", 
+      <Text style={styles.title}>Calendario de Citas</Text>
+      <Calendar
+        onDayPress={handleDateSelection}
+        markedDates={{
+          [selectedDate]: { selected: true, selectedColor: 'blue' },
+          ...citas.reduce((acc, cita) => {
+            const date = moment(cita.HorarioInicio).format("YYYY-MM-DD");
+            acc[date] = { marked: true, dotColor: 'red' };
+            return acc;
+          }, {} as { [key: string]: { marked: boolean; dotColor?: string } })
         }}
       />
+
+      {citasFiltradas.length > 0 ? (
+        <FlatList
+          data={citasFiltradas}
+          keyExtractor={item => item.IdCita.toString()}
+          renderItem={renderCita}
+        />
+      ) : (
+        <Text style={styles.noCitasText}>No hay citas para esta fecha.</Text>
+      )}
+
       <Modal
         visible={modalVisible}
-        animationType="slide"
         transparent={true}
         onRequestClose={() => setModalVisible(false)}
       >
-        <View style={styles.modalView}>
+        <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            {selectedEvent && (
+            {selectedCita && (
               <View>
-                <Text style={styles.modalTitle}>Detalles de la cita</Text>
-                <Text style={styles.modalText}>Título: {selectedEvent.name}</Text>
-                <Text style={styles.modalText}>Inicio: {moment(selectedEvent.start).format("LLL")}</Text>
-                <Text style={styles.modalText}>Fin: {moment(selectedEvent.end).format("LLL")}</Text>
-                <Text style={styles.modalText}>Descripción: {selectedEvent.description}</Text>
+                <Text style={styles.modalTitle}>Detalles de la Cita</Text>
+                <Text style={styles.modalText}>Paciente: {selectedCita.Nombre} {selectedCita.ApellidoP}</Text>
+                <Text style={styles.modalText}>Inicio: {moment(selectedCita.HorarioInicio).format("LLL")}</Text>
+                <Text style={styles.modalText}>Fin: {moment(selectedCita.HoraFin).format("LLL")}</Text>
+                <Text style={styles.modalText}>Descripción: {selectedCita.Descripcion}</Text>
               </View>
             )}
-            <Button 
-              title="Cerrar" 
-              onPress={() => setModalVisible(false)} 
-              color="#2196F3" 
-            />
+            <Button title="Cerrar" onPress={() => setModalVisible(false)} color="#2196F3" />
           </View>
         </View>
       </Modal>
@@ -136,46 +111,48 @@ export default function CalendarScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 50,
-    backgroundColor: "white",
+    paddingTop: 20,
+    backgroundColor: 'white',
+    paddingHorizontal: 16,
   },
   title: {
     fontSize: 24,
-    textAlign: "center",
-    marginVertical: 20,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 20,
   },
   item: {
     backgroundColor: "#f9f9f9",
     padding: 10,
     borderBottomWidth: 1,
     borderBottomColor: "#ddd",
-    marginVertical: 1, 
-    borderRadius: 5, 
+    borderRadius: 5,
+    marginVertical: 5,
   },
-  emptyDate: {
-    padding: 50, 
-    backgroundColor: "#e0e0e0", 
-    borderBottomWidth: 1,
-    borderBottomColor: "#ddd",
-    borderRadius: 5, 
-  },  
-  modalView: {
+  itemText: {
+    fontSize: 16,
+    color: "#333",
+  },
+  noCitasText: {
+    textAlign: 'center',
+    color: '#999',
+    marginTop: 20,
+  },
+  modalContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.5)", 
-    padding: 20,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
   },
   modalContent: {
-    width: "90%",
+    width: "80%",
     backgroundColor: "white",
-    borderRadius: 15,
     padding: 20,
-    alignItems: "center",
+    borderRadius: 10,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
     elevation: 5,
   },
   modalTitle: {
@@ -186,17 +163,6 @@ const styles = StyleSheet.create({
   modalText: {
     fontSize: 16,
     marginVertical: 5,
-  },
-  closeButton: {
-    marginTop: 20,
-    backgroundColor: "#2196F3",
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 10,
-  },
-  closeButtonText: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "bold",
+    color: "#333",
   },
 });

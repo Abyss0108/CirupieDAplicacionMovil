@@ -11,6 +11,7 @@ const UserProfileScreen = () => {
 
   // Función para cerrar sesión
   const handleLogout = () => {
+    console.log(user);
     logout();
     router.replace('/login'); // Redirige al login después de cerrar sesión
   };

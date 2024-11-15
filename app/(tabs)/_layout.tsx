@@ -13,8 +13,9 @@ export default function TabLayout() {
     <AuthProvider>
       <Tabs
         screenOptions={{
-          tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-          headerShown: false,
+          tabBarActiveTintColor: Colors[colorScheme ?? 'dark'].tint,
+    tabBarStyle: { backgroundColor: '#000000' }, // Fondo negro para la barra de pestañas
+    headerShown: false,
         }}>
         <Tabs.Screen
           name="index"
@@ -48,7 +49,16 @@ export default function TabLayout() {
           options={{
             title: 'Pagos',
             tabBarIcon: ({ color, focused }) => (
-              <TabBarIcon name={focused ? 'create' : 'create-outline'} color={color} />
+              <TabBarIcon name={focused ? 'bag-check' : 'bag-check-outline'} color={color} />
+            ),
+          }}
+        />
+         <Tabs.Screen
+          name="pacientes"
+          options={{
+            title: 'Pacientes',
+            tabBarIcon: ({ color, focused }) => (
+              <TabBarIcon name={focused ? 'bandage' : 'bandage-outline'} color={color} />
             ),
           }}
         />
@@ -57,7 +67,7 @@ export default function TabLayout() {
           options={{
             title: 'Perfil',
             tabBarIcon: ({ color, focused }) => (
-              <TabBarIcon name={focused ? 'person-circle-outline' : 'person-circle-sharp'} color={color} />
+              <TabBarIcon name={focused ? 'person-circle-sharp' : 'person-circle-outline'} color={color} />
             ),
           }}
         />
