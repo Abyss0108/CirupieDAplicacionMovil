@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, Button, Modal, TextInput, TouchableOpacity, FlatList, Alert, ActivityIndicator, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, Alert, StyleSheet, FlatList, ActivityIndicator, Modal, TextInput } from "react-native";
 import { Calendar } from "react-native-calendars";
-import { useRouter } from "expo-router";
-import { CardField, useConfirmPayment } from "@stripe/stripe-react-native";
+import { useStripe } from "@stripe/stripe-react-native";
 
 interface Cita {
   IdCita: number;
@@ -14,17 +13,16 @@ interface Cita {
 }
 
 export default function CitasDisponibles() {
-  const router = useRouter();
   const [citasDisponibles, setCitasDisponibles] = useState<Cita[]>([]);
   const [citasFiltradas, setCitasFiltradas] = useState<Cita[]>([]);
   const [selectedCita, setSelectedCita] = useState<Cita | null>(null);
-  const [showVerificationModal, setShowVerificationModal] = useState(false);
-  const [showPaymentForm, setShowPaymentForm] = useState(false);
-  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [email, setEmail] = useState("");
-  const [isPatient, setIsPatient] = useState(false);
   const [pacienteId, setPacienteId] = useState<number | null>(null);
-  const [feedback, setFeedback] = useState({ rating: 5, comment: "" });
+  const [isLoading, setIsLoading] = useState(false);
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [showPaymentSheet, setShowPaymentSheet] = useState(false);
+
+  const { initPaymentSheet, presentPaymentSheet } = useStripe();
 
   useEffect(() => {
     obtenerCitasDisponibles();
@@ -53,15 +51,14 @@ export default function CitasDisponibles() {
     setShowVerificationModal(true);
   };
 
-  const handlePatientVerification = async () => {
+  const verifyPatient = async () => {
     try {
       const response = await fetch(`https://rest-api2-three.vercel.app/api/pacientes-correo/${email}`);
       const data = await response.json();
       if (data.IdPaciente) {
-        setPacienteId(data.IdPaciente); // Guarda el id del paciente
-        setIsPatient(true);
+        setPacienteId(data.IdPaciente);
         setShowVerificationModal(false);
-        setShowPaymentForm(true);
+        initializePaymentSheet(data.IdPaciente);
       } else {
         Alert.alert("Información", "No estás registrado como paciente. Por favor regístrate.");
       }
@@ -70,22 +67,62 @@ export default function CitasDisponibles() {
     }
   };
 
-  const verificarFeedbackExistente = async (pacienteId: number | null) => {
-    if (!pacienteId) return; // Verifica que pacienteId no sea nulo antes de continuar
+  const initializePaymentSheet = async (idPaciente: number) => {
+    if (!selectedCita) return;
+
     try {
-      const response = await fetch(`https://rest-api2-three.vercel.app/api/existe_feedback/${pacienteId}`);
-      const data = await response.json();
-      console.log(data.exists);
-      if (data.exists === false) {
-        setShowFeedbackModal(true);
+      setIsLoading(true);
+
+      const response = await fetch("https://rest-api2-three.vercel.app/api/create-payment-intent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: 1000, citaId: selectedCita.IdCita, pacienteId: idPaciente }),
+      });
+
+      const { clientSecret } = await response.json();
+
+      if (!clientSecret) {
+        throw new Error("Error al inicializar el PaymentSheet.");
       }
+
+      const { error } = await initPaymentSheet({
+        paymentIntentClientSecret: clientSecret,
+        merchantDisplayName: "Tu Empresa",
+      });
+
+      if (error) {
+        throw new Error(error.message || "Error al inicializar el PaymentSheet.");
+      }
+
+      setShowPaymentSheet(true);
     } catch (error) {
-      console.error("Error al verificar el feedback:", error);
+      console.error("Error al inicializar el PaymentSheet:", error);
+      Alert.alert("Error", "No se pudo inicializar el formulario de pago.");
+    } finally {
+      setIsLoading(false);
     }
   };
-  const handlePaymentSuccess = async () => {
+
+  const openPaymentSheet = async () => {
+    try {
+      const { error } = await presentPaymentSheet();
+
+      if (error) {
+        Alert.alert("Pago cancelado", error.message || "El pago fue cancelado.");
+      } else {
+        Alert.alert("Pago exitoso", "¡El pago se realizó con éxito!");
+        setShowPaymentSheet(false);
+        actualizarCita();
+      }
+    } catch (error) {
+      console.error("Error al presentar el PaymentSheet:", error);
+      Alert.alert("Error", "Hubo un problema al procesar el pago.");
+    }
+  };
+
+  const actualizarCita = async () => {
     if (!selectedCita || !pacienteId) return;
-    verificarFeedbackExistente(pacienteId);
+
     try {
       const response = await fetch(`https://rest-api2-three.vercel.app/api/citas-disponibles/${selectedCita.IdCita}`, {
         method: "PUT",
@@ -96,115 +133,19 @@ export default function CitasDisponibles() {
           IdPaciente: pacienteId,
         }),
       });
-      await response.json();
-      Alert.alert("Éxito", "Se agendó su cita correctamente");
-      setShowPaymentForm(false);
-      verificarFeedbackExistente(pacienteId); // Muestra el modal de feedback después del pago exitoso
-      obtenerCitasDisponibles();
-    } catch (error) {
-      Alert.alert("Error", "Error al actualizar cita");
-    }
-  };
-
-  const handleFeedbackSubmit = async () => {
-    if (!pacienteId) return;
-
-    try {
-      const response = await fetch("https://rest-api2-three.vercel.app/api/feedback", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          pacienteId: pacienteId,
-          calificacion: feedback.rating,
-          comentario: feedback.comment,
-        }),
-      });
-
       if (response.ok) {
-        Alert.alert("Gracias", "Gracias por su retroalimentación.");
-        setShowFeedbackModal(false);
-        setFeedback({ rating: 5, comment: "" });
+        Alert.alert("Éxito", "Cita agendada correctamente.");
+        obtenerCitasDisponibles();
       } else {
-        throw new Error("Error al enviar el feedback");
+        throw new Error("Error al actualizar la cita.");
       }
     } catch (error) {
-      Alert.alert("Error", "No se pudo enviar el feedback.");
+      Alert.alert("Error", "No se pudo agendar la cita.");
     }
-  };
-
-  const CheckoutForm = ({ onPaymentSuccess }: { onPaymentSuccess: () => void }) => {
-    const { confirmPayment, loading } = useConfirmPayment();
-    const [message, setMessage] = useState("");
-
-    const handleSubmit = async () => {
-      setMessage("");
-      onPaymentSuccess();
-      
-      try {
-        const response = await fetch("https://rest-api2-three.vercel.app/api/create-payment-intent", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ amount: 1000, pacienteId: selectedCita?.IdCita }),
-        });
-
-        const textResponse = await response.text();
-        console.log("API Response:", textResponse);
-        const jsonResponse = JSON.parse(textResponse);
-        const { clientSecret } = jsonResponse;
-
-        const { error, paymentIntent } = await confirmPayment(clientSecret, {
-          paymentMethodType: "Card",
-        });
-
-        if (error) {
-          setMessage(`Error: ${error.message}`);
-        } else if (jsonResponse.success === true) {
-          setMessage("Pago exitoso. Su cita ha sido agendada.");
-          Alert.alert("Éxito", "Pago exitoso. Su cita ha sido agendada.");
-          onPaymentSuccess();
-        }
-      } catch (error) {
-        setMessage("Hubo un error al procesar el pago.");
-        console.error("Payment Error:", error);
-      }
-    };
-
-    return (
-      <View style={styles.paymentContainer}>
-        <CardField
-          postalCodeEnabled={true}
-          placeholders={{
-            number: "Número de tarjeta",
-            expiration: "MM/AA",
-            cvc: "CVC",
-          }}
-          cardStyle={{
-            backgroundColor: "#FFFFFF",
-            textColor: "#000000",
-            borderRadius: 8,
-            borderWidth: 1,
-            borderColor: "#DDDDDD",
-          }}
-          style={{
-            width: "100%",
-            height: 50,
-            marginBottom: 10,
-          }}
-        />
-        <TouchableOpacity style={styles.payButton} onPress={handleSubmit} disabled={loading}>
-          <Text style={styles.payButtonText}>Pagar y Agendar Cita</Text>
-        </TouchableOpacity>
-        {loading && <ActivityIndicator size="small" color="#007AFF" style={{ marginTop: 10 }} />}
-        {message && <Text style={styles.paymentMessage}>{message}</Text>}
-      </View>
-    );
   };
 
   return (
     <View style={{ flex: 1, padding: 20 }}>
-      <Button title="Ir al Login" onPress={() => router.push("/login")} />
       <Text style={{ fontSize: 20, fontWeight: "bold", marginVertical: 10 }}>Citas Disponibles</Text>
 
       <Calendar
@@ -216,84 +157,64 @@ export default function CitasDisponibles() {
         }, {} as { [key: string]: { marked: boolean; selectedColor: string } })}
       />
 
-      {citasFiltradas.length > 0 && (
-        <FlatList
-          data={citasFiltradas}
-          keyExtractor={(item) => item.IdCita.toString()}
-          renderItem={({ item }) => (
-            <TouchableOpacity onPress={() => handleCitaSelection(item)}>
-              <View style={{ padding: 10, borderBottomWidth: 1, borderBottomColor: "#ddd" }}>
-                <Text style={{ fontSize: 16 }}>{item.Nombre} {item.ApellidoP}</Text>
-                <Text>{new Date(item.HorarioInicio).toLocaleTimeString()} - {new Date(item.HoraFin).toLocaleTimeString()}</Text>
-              </View>
-            </TouchableOpacity>
-          )}
-        />
-      )}
+      <FlatList
+        data={citasFiltradas}
+        keyExtractor={(item) => item.IdCita.toString()}
+        renderItem={({ item }) => (
+          <TouchableOpacity onPress={() => handleCitaSelection(item)}>
+            <View style={{ padding: 10, borderBottomWidth: 1, borderBottomColor: "#ddd" }}>
+              <Text style={{ fontSize: 16 }}>{item.Nombre} {item.ApellidoP}</Text>
+              <Text>{new Date(item.HorarioInicio).toLocaleTimeString()} - {new Date(item.HoraFin).toLocaleTimeString()}</Text>
+            </View>
+          </TouchableOpacity>
+        )}
+      />
 
       <Modal visible={showVerificationModal} animationType="slide" transparent={true}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>Confirmar Cita {selectedCita && new Date(selectedCita.HorarioInicio).toLocaleString()}</Text>
-            <Text>Por favor, ingresa tu correo electrónico para verificar si ya eres paciente:</Text>
+            <Text style={styles.modalTitle}>Verificar Paciente</Text>
             <TextInput
               placeholder="Correo electrónico"
               value={email}
               onChangeText={setEmail}
               style={styles.input}
-              keyboardType="email-address"
             />
-            <TouchableOpacity style={styles.button} onPress={handlePatientVerification}>
-              <Text style={styles.buttonText}>Agendar</Text>
+            <TouchableOpacity style={styles.button} onPress={verifyPatient}>
+              <Text style={styles.buttonText}>Verificar</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.button, styles.secondaryButton]} onPress={() => setShowVerificationModal(false)}>
+            <TouchableOpacity
+              style={[styles.button, styles.secondaryButton]}
+              onPress={() => setShowVerificationModal(false)}
+            >
               <Text style={styles.buttonText}>Cerrar</Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
 
-      <Modal visible={showPaymentForm} animationType="slide" transparent={true}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>Formulario de Pago</Text>
-            <CheckoutForm onPaymentSuccess={handlePaymentSuccess} />
-            <TouchableOpacity style={[styles.button, styles.secondaryButton]} onPress={() => setShowPaymentForm(false)}>
-              <Text style={styles.buttonText}>Cerrar</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      <Modal visible={showFeedbackModal} animationType="slide" transparent={true}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>Retroalimentación</Text>
-            <Text>Calificación:</Text>
-            <TextInput
-              placeholder="Calificación (1-5)"
-              keyboardType="numeric"
-              value={String(feedback.rating)}
-              onChangeText={(value) => setFeedback({ ...feedback, rating: parseInt(value) })}
-              style={styles.input}
-            />
-            <Text>Comentario:</Text>
-            <TextInput
-              placeholder="Escribe un comentario"
-              value={feedback.comment}
-              onChangeText={(value) => setFeedback({ ...feedback, comment: value })}
-              style={[styles.input, { height: 60 }]}
-              multiline
-            />
-            <TouchableOpacity style={styles.button} onPress={handleFeedbackSubmit}>
-              <Text style={styles.buttonText}>Enviar </Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.button, styles.secondaryButton]} onPress={() => setShowFeedbackModal(false)}>
-              <Text style={styles.buttonText}>Cerrar</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+      <Modal visible={showPaymentSheet} animationType="slide" transparent={true}>
+  <View style={styles.modalOverlay}>
+    <View style={styles.modalContainer}>
+      <Text style={styles.modalTitle}>Formulario de Pago</Text>
+      {isLoading ? (
+        <ActivityIndicator size="large" color="#007bff" />
+      ) : (
+        <>
+          <TouchableOpacity style={styles.button} onPress={openPaymentSheet}>
+            <Text style={styles.buttonText}>Pagar y Agendar Cita</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.button, styles.secondaryButton]}
+            onPress={() => setShowPaymentSheet(false)} // Cierra el modal
+          >
+            <Text style={styles.buttonText}>Cerrar</Text>
+          </TouchableOpacity>
+        </>
+      )}
+    </View>
+  </View>
+</Modal>
     </View>
   );
 }
@@ -307,7 +228,7 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     width: "90%",
-    padding: 10,
+    padding: 20,
     backgroundColor: "white",
     borderRadius: 10,
     alignItems: "center",
@@ -339,44 +260,5 @@ const styles = StyleSheet.create({
   buttonText: {
     color: "white",
     fontWeight: "bold",
-  },
-  paymentContainer: {
-    paddingVertical: 20,
-    paddingHorizontal: 20,
-    alignItems: "center",
-    backgroundColor: "#F9F9F9",
-    borderRadius: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    width: "90%",
-    alignSelf: "center",
-  },
-  paymentTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 20,
-    color: "#333333",
-  },
-  payButton: {
-    backgroundColor: "#007AFF",
-    paddingVertical: 12,
-    paddingHorizontal: 25,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-    width: "100%",
-  },
-  payButtonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  paymentMessage: {
-    marginTop: 15,
-    fontSize: 14,
-    color: "#333333",
-    textAlign: "center",
   },
 });
