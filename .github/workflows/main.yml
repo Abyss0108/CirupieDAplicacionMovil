@@ -43,10 +43,13 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     needs: snyk-scan
-    if: github.ref == 'refs/heads/main'  
+    if: github.ref == 'refs/heads/main'
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+
+      - name: Install jq (JSON processor)
+        run: sudo apt-get install jq -y
 
       - name: Install EAS CLI
         run: npm install -g eas-cli
@@ -57,25 +60,22 @@ jobs:
       - name: Build APK for Android
         run: eas build --platform android --profile production
         env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}  
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Debug EAS Response
+        run: |
+          RESPONSE=$(eas build:list --limit=1 --status=finished --json --non-interactive)
+          echo "Respuesta de EAS Build: $RESPONSE"
+          DOWNLOAD_URL=$(echo "$RESPONSE" | jq -r '.[0].artifacts.buildUrl')
+          echo "URL del APK: $DOWNLOAD_URL"
 
       - name: Upload image and send data to API
         run: |
-          # Obtener URL del artefacto
-          RESPONSE=$(eas build:list --limit=1 --status=finished --json --non-interactive)
-          DOWNLOAD_URL=$(echo "$RESPONSE" | jq -r '.[0].artifacts.buildUrl')
-
-          echo "La URL del artefacto obtenida es: $DOWNLOAD_URL"
-
           # Verificar si la imagen existe
           if [ ! -f "$IMAGE_PATH" ]; then
             echo "La imagen no existe en la ruta especificada: $IMAGE_PATH"
             exit 1
           fi
-
-          # Obtener solo el nombre del archivo desde la ruta completa
-          IMAGE_NAME=$(basename "$IMAGE_PATH")
-          echo "El nombre del icono es: $IMAGE_NAME"
 
           # Subir la imagen al servidor PHP
           curl -X POST \
@@ -88,15 +88,14 @@ jobs:
             -d '{
               "url": "'"$DOWNLOAD_URL"'",
               "nombre": "'"$PROJECT_NAME"'",
-              "icono": "'"$IMAGE_NAME"'"
+              "icono": "'"$IMAGE_PATH"'"
             }'
-
         env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-          IMAGE_PATH: ".github/workflows/CirupieD2.png" 
+          IMAGE_PATH: ".github/workflows/CirupieD2.png"
           WEB_SERVICE_URL: "https://labarbada.store/subirImagen.php"
-          API_URL: "https://api-admin-six.vercel.app/api/guardar-datos" 
-          PROJECT_NAME: "CirupieD"  
+          API_URL: "https://api-admin-six.vercel.app/api/guardar-datos"
+          PROJECT_NAME: "CirupieD"
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
   notify-email:
     needs: [lint, integration-tests, deploy]
