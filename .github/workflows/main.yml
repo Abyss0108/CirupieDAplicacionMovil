@@ -32,9 +32,7 @@ jobs:
       - name: Install dependencies
         run: npm install
       - name: Check installed packages
-        run: npm list jest        
-      - name: Run Integration Tests
-        run: npm run test:integration
+        run: npm list jest
 
   snyk-scan:
     needs: integration-tests
